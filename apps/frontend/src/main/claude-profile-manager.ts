@@ -338,8 +338,63 @@ export class ClaudeProfileManager {
   }
 
   /**
+   * Update custom API provider settings for a profile.
+   * Auth token is encrypted before storing.
+   */
+  updateCustomApiSettings(
+    profileId: string,
+    settings: {
+      enabled?: boolean;
+      baseUrl?: string;
+      authToken?: string;
+      timeout?: number;
+      haikuModel?: string;
+      sonnetModel?: string;
+      opusModel?: string;
+    }
+  ): boolean {
+    const profile = this.getProfile(profileId);
+    if (!profile) {
+      return false;
+    }
+
+    if (settings.enabled !== undefined) {
+      profile.customApiEnabled = settings.enabled;
+    }
+    if (settings.baseUrl !== undefined) {
+      profile.customApiBaseUrl = settings.baseUrl || undefined;
+    }
+    if (settings.authToken !== undefined) {
+      // Encrypt the auth token before storing (empty string = clear)
+      profile.customApiAuthToken = settings.authToken ? encryptToken(settings.authToken) : undefined;
+    }
+    if (settings.timeout !== undefined) {
+      profile.customApiTimeout = settings.timeout || undefined;
+    }
+    if (settings.haikuModel !== undefined) {
+      profile.customApiHaikuModel = settings.haikuModel || undefined;
+    }
+    if (settings.sonnetModel !== undefined) {
+      profile.customApiSonnetModel = settings.sonnetModel || undefined;
+    }
+    if (settings.opusModel !== undefined) {
+      profile.customApiOpusModel = settings.opusModel || undefined;
+    }
+
+    this.save();
+
+    console.warn('[ClaudeProfileManager] Updated custom API settings for profile:', profile.name, {
+      enabled: profile.customApiEnabled,
+      endpoint: profile.customApiBaseUrl,
+      hasToken: !!profile.customApiAuthToken
+    });
+    return true;
+  }
+
+  /**
    * Get environment variables for spawning processes with the active profile.
    * Returns { CLAUDE_CODE_OAUTH_TOKEN: token } if token is available (decrypted).
+   * Also includes custom API provider settings if configured.
    */
   getActiveProfileEnv(): Record<string, string> {
     const profile = this.getActiveProfile();
@@ -358,6 +413,41 @@ export class ClaudeProfileManager {
       // Fallback to configDir for backward compatibility
       env.CLAUDE_CONFIG_DIR = profile.configDir;
       console.warn('[ClaudeProfileManager] Using configDir for profile:', profile.name);
+    }
+
+    // Add custom API provider settings if enabled for this profile
+    if (profile?.customApiEnabled) {
+      if (profile.customApiBaseUrl) {
+        env.ANTHROPIC_BASE_URL = profile.customApiBaseUrl;
+      }
+      if (profile.customApiAuthToken) {
+        // Decrypt the custom API token
+        const decryptedApiToken = decryptToken(profile.customApiAuthToken);
+        if (decryptedApiToken) {
+          env.ANTHROPIC_AUTH_TOKEN = decryptedApiToken;
+        }
+      }
+      if (profile.customApiTimeout) {
+        env.API_TIMEOUT_MS = String(profile.customApiTimeout);
+      }
+      if (profile.customApiHaikuModel) {
+        env.ANTHROPIC_DEFAULT_HAIKU_MODEL = profile.customApiHaikuModel;
+      }
+      if (profile.customApiSonnetModel) {
+        env.ANTHROPIC_DEFAULT_SONNET_MODEL = profile.customApiSonnetModel;
+      }
+      if (profile.customApiOpusModel) {
+        env.ANTHROPIC_DEFAULT_OPUS_MODEL = profile.customApiOpusModel;
+      }
+      console.warn('[ClaudeProfileManager] Using custom API provider for profile:', profile.name, {
+        endpoint: profile.customApiBaseUrl,
+        hasToken: !!profile.customApiAuthToken,
+        models: {
+          haiku: profile.customApiHaikuModel,
+          sonnet: profile.customApiSonnetModel,
+          opus: profile.customApiOpusModel
+        }
+      });
     }
 
     return env;

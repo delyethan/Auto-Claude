@@ -305,6 +305,15 @@ export interface ProjectEnvConfig {
 
   // UI Settings
   enableFancyUi: boolean;
+
+  // Custom API Provider
+  customApiEnabled?: boolean;
+  customApiBaseUrl?: string;
+  customApiAuthToken?: string;
+  customApiTimeout?: number;
+  customApiHaikuModel?: string;
+  customApiSonnetModel?: string;
+  customApiOpusModel?: string;
 }
 
 // Auto Claude Initialization Types

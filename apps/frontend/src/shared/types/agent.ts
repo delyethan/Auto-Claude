@@ -95,6 +95,22 @@ export interface ClaudeProfile {
   usage?: ClaudeUsageData;
   /** Recent rate limit events for this profile */
   rateLimitEvents?: ClaudeRateLimitEvent[];
+
+  // Custom API Provider Configuration (optional)
+  /** Enable custom API provider for this profile */
+  customApiEnabled?: boolean;
+  /** Custom API endpoint URL (e.g., https://api.z.ai/api/anthropic) */
+  customApiBaseUrl?: string;
+  /** Custom API authentication token (encrypted) */
+  customApiAuthToken?: string;
+  /** API request timeout in milliseconds (default: 600000) */
+  customApiTimeout?: number;
+  /** Custom model name for Haiku tier (e.g., glm-4.5-air) */
+  customApiHaikuModel?: string;
+  /** Custom model name for Sonnet tier (e.g., glm-4.7) */
+  customApiSonnetModel?: string;
+  /** Custom model name for Opus tier (e.g., glm-4.7) */
+  customApiOpusModel?: string;
 }
 
 /**

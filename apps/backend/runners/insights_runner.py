@@ -116,6 +116,16 @@ Your capabilities:
 2. Suggest improvements, features, or bug fixes based on the code
 3. Help plan implementation of new features
 4. Provide code examples and explanations
+5. Create files and folders when helpful (using Write tool)
+6. Edit existing files (using Edit tool)
+7. Run commands to gather information (using Bash tool)
+
+You can proactively create helpful files like:
+- Documentation files (README.md, guides, etc.)
+- Configuration files
+- Example code snippets
+- Test files
+- Scripts
 
 When the user asks you to create a task, wants to turn the conversation into a task, or when you believe creating a task would be helpful, output a task suggestion in this exact format on a SINGLE LINE:
 __TASK_SUGGESTION__:{{"title": "Task title here", "description": "Detailed description of what the task involves", "metadata": {{"category": "feature", "complexity": "medium", "impact": "medium"}}}}
@@ -186,6 +196,9 @@ Current question: {message}"""
                     "Read",
                     "Glob",
                     "Grep",
+                    "Write",
+                    "Edit",
+                    "Bash",
                 ],
                 max_turns=30,  # Allow sufficient turns for codebase exploration
                 cwd=str(project_path),

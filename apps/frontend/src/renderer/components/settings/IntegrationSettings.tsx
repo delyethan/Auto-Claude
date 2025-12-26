@@ -18,7 +18,8 @@ import {
   ChevronRight,
   RefreshCw,
   Activity,
-  AlertCircle
+  AlertCircle,
+  Settings
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -59,6 +60,20 @@ export function IntegrationSettings({ settings, onSettingsChange, isOpen }: Inte
   const [manualTokenEmail, setManualTokenEmail] = useState('');
   const [showManualToken, setShowManualToken] = useState(false);
   const [savingTokenProfileId, setSavingTokenProfileId] = useState<string | null>(null);
+
+  // Custom API settings state
+  const [expandedCustomApiProfileId, setExpandedCustomApiProfileId] = useState<string | null>(null);
+  const [customApiSettings, setCustomApiSettings] = useState({
+    enabled: false,
+    baseUrl: '',
+    authToken: '',
+    timeout: 600000,
+    haikuModel: '',
+    sonnetModel: '',
+    opusModel: ''
+  });
+  const [showCustomApiToken, setShowCustomApiToken] = useState(false);
+  const [savingCustomApiProfileId, setSavingCustomApiProfileId] = useState<string | null>(null);
 
   // Auto-swap settings state
   const [autoSwitchSettings, setAutoSwitchSettings] = useState<ClaudeAutoSwitchSettings | null>(null);
@@ -259,6 +274,79 @@ export function IntegrationSettings({ settings, onSettingsChange, isOpen }: Inte
     }
   };
 
+  const toggleCustomApiSettings = (profileId: string) => {
+    if (expandedCustomApiProfileId === profileId) {
+      setExpandedCustomApiProfileId(null);
+      setCustomApiSettings({
+        enabled: false,
+        baseUrl: '',
+        authToken: '',
+        timeout: 600000,
+        haikuModel: '',
+        sonnetModel: '',
+        opusModel: ''
+      });
+      setShowCustomApiToken(false);
+    } else {
+      // Load existing settings from the profile
+      const profile = claudeProfiles.find(p => p.id === profileId);
+      if (profile) {
+        setCustomApiSettings({
+          enabled: profile.customApiEnabled ?? false,
+          baseUrl: profile.customApiBaseUrl ?? '',
+          authToken: profile.customApiAuthToken ? '[SAVED]' : '', // Placeholder for existing token
+          timeout: profile.customApiTimeout ?? 600000,
+          haikuModel: profile.customApiHaikuModel ?? '',
+          sonnetModel: profile.customApiSonnetModel ?? '',
+          opusModel: profile.customApiOpusModel ?? ''
+        });
+      }
+      setExpandedCustomApiProfileId(profileId);
+      setShowCustomApiToken(false);
+    }
+  };
+
+  const handleSaveCustomApiSettings = async (profileId: string) => {
+    setSavingCustomApiProfileId(profileId);
+    try {
+      // Only include authToken if it's been changed (not the placeholder)
+      const tokenToSave = customApiSettings.authToken === '[SAVED]'
+        ? undefined
+        : customApiSettings.authToken.trim() || undefined;
+
+      const result = await window.electronAPI.updateClaudeProfileCustomApi(profileId, {
+        enabled: customApiSettings.enabled,
+        baseUrl: customApiSettings.baseUrl.trim() || undefined,
+        authToken: tokenToSave,
+        timeout: customApiSettings.timeout || undefined,
+        haikuModel: customApiSettings.haikuModel.trim() || undefined,
+        sonnetModel: customApiSettings.sonnetModel.trim() || undefined,
+        opusModel: customApiSettings.opusModel.trim() || undefined
+      });
+      if (result.success) {
+        await loadClaudeProfiles();
+        setExpandedCustomApiProfileId(null);
+        setCustomApiSettings({
+          enabled: false,
+          baseUrl: '',
+          authToken: '',
+          timeout: 600000,
+          haikuModel: '',
+          sonnetModel: '',
+          opusModel: ''
+        });
+        setShowCustomApiToken(false);
+      } else {
+        alert(`Failed to save custom API settings: ${result.error || 'Please try again.'}`);
+      }
+    } catch (err) {
+      console.error('Failed to save custom API settings:', err);
+      alert('Failed to save custom API settings. Please try again.');
+    } finally {
+      setSavingCustomApiProfileId(null);
+    }
+  };
+
   // Load auto-swap settings
   const loadAutoSwitchSettings = async () => {
     setIsLoadingAutoSwitch(true);
@@ -333,7 +421,7 @@ export function IntegrationSettings({ settings, onSettingsChange, isOpen }: Inte
                   >
                     <div className={cn(
                       "flex items-center justify-between p-3",
-                      expandedTokenProfileId !== profile.id && "hover:bg-muted/50"
+                      expandedTokenProfileId !== profile.id && expandedCustomApiProfileId !== profile.id && "hover:bg-muted/50"
                     )}>
                       <div className="flex items-center gap-3">
                         <div className={cn(
@@ -463,7 +551,21 @@ export function IntegrationSettings({ settings, onSettingsChange, isOpen }: Inte
                             {expandedTokenProfileId === profile.id ? (
                               <ChevronDown className="h-3 w-3" />
                             ) : (
-                              <ChevronRight className="h-3 w-3" />
+                              <Key className="h-3 w-3" />
+                            )}
+                          </Button>
+                          {/* Toggle custom API settings button */}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => toggleCustomApiSettings(profile.id)}
+                            className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                            title={expandedCustomApiProfileId === profile.id ? "Hide custom API settings" : "Custom API settings"}
+                          >
+                            {expandedCustomApiProfileId === profile.id ? (
+                              <ChevronDown className="h-3 w-3" />
+                            ) : (
+                              <Settings className="h-3 w-3" />
                             )}
                           </Button>
                           <Button
@@ -556,6 +658,153 @@ export function IntegrationSettings({ settings, onSettingsChange, isOpen }: Inte
                                 <Check className="h-3 w-3" />
                               )}
                               {t('integrations.saveToken')}
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Expanded custom API settings section */}
+                    {expandedCustomApiProfileId === profile.id && (
+                      <div className="px-3 pb-3 pt-0 border-t border-border/50 mt-0">
+                        <div className="bg-muted/30 rounded-lg p-3 mt-3 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <Label className="text-xs font-medium text-muted-foreground">
+                              Custom API Provider Settings
+                            </Label>
+                          </div>
+
+                          {/* Info box */}
+                          <div className="rounded-lg bg-info/10 border border-info/30 p-2">
+                            <div className="flex items-start gap-2">
+                              <Info className="h-3 w-3 text-info shrink-0 mt-0.5" />
+                              <p className="text-xs text-muted-foreground">
+                                {t('integrations.customProviderDescription')}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="space-y-3">
+                            {/* Enable toggle */}
+                            <div className="flex items-center justify-between rounded-lg bg-background border border-border p-2">
+                              <Label className="text-xs font-medium">{t('integrations.enableCustomProvider')}</Label>
+                              <input
+                                type="checkbox"
+                                checked={customApiSettings.enabled}
+                                onChange={(e) => setCustomApiSettings({ ...customApiSettings, enabled: e.target.checked })}
+                                className="h-4 w-4"
+                              />
+                            </div>
+
+                            {/* Configuration fields (shown when enabled) */}
+                            {customApiSettings.enabled && (
+                              <div className="space-y-3 pl-3 border-l-2 border-primary/20">
+                                {/* API Endpoint */}
+                                <div className="space-y-1">
+                                  <Label className="text-xs font-medium">{t('integrations.customEndpoint')}</Label>
+                                  <Input
+                                    type="url"
+                                    placeholder={t('integrations.customEndpointPlaceholder')}
+                                    value={customApiSettings.baseUrl}
+                                    onChange={(e) => setCustomApiSettings({ ...customApiSettings, baseUrl: e.target.value })}
+                                    className="font-mono text-xs h-8"
+                                  />
+                                </div>
+
+                                {/* Auth Token */}
+                                <div className="space-y-1">
+                                  <Label className="text-xs font-medium">{t('integrations.customAuthToken')}</Label>
+                                  <div className="relative">
+                                    <Input
+                                      type={showCustomApiToken ? 'text' : 'password'}
+                                      placeholder={customApiSettings.authToken === '[SAVED]' ? 'Token saved - enter new to replace' : t('integrations.customAuthTokenPlaceholder')}
+                                      value={customApiSettings.authToken === '[SAVED]' ? '' : customApiSettings.authToken}
+                                      onChange={(e) => setCustomApiSettings({ ...customApiSettings, authToken: e.target.value })}
+                                      className="pr-10 font-mono text-xs h-8"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => setShowCustomApiToken(!showCustomApiToken)}
+                                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                    >
+                                      {showCustomApiToken ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                                    </button>
+                                  </div>
+                                  {customApiSettings.authToken === '[SAVED]' && (
+                                    <p className="text-xs text-success flex items-center gap-1">
+                                      <Check className="h-3 w-3" />
+                                      Token saved - leave empty to keep current token
+                                    </p>
+                                  )}
+                                </div>
+
+                                {/* API Timeout */}
+                                <div className="space-y-1">
+                                  <Label className="text-xs font-medium">{t('integrations.customTimeout')}</Label>
+                                  <Input
+                                    type="number"
+                                    min="60000"
+                                    max="3600000"
+                                    step="60000"
+                                    placeholder="600000"
+                                    value={customApiSettings.timeout || ''}
+                                    onChange={(e) => setCustomApiSettings({ ...customApiSettings, timeout: parseInt(e.target.value) || 600000 })}
+                                    className="font-mono text-xs h-8"
+                                  />
+                                </div>
+
+                                {/* Model Mapping */}
+                                <div className="space-y-2">
+                                  <Label className="text-xs font-medium">{t('integrations.customModels')}</Label>
+                                  <div className="space-y-2">
+                                    <Input
+                                      type="text"
+                                      placeholder={t('integrations.haikuModelPlaceholder')}
+                                      value={customApiSettings.haikuModel}
+                                      onChange={(e) => setCustomApiSettings({ ...customApiSettings, haikuModel: e.target.value })}
+                                      className="font-mono text-xs h-8"
+                                    />
+                                    <Input
+                                      type="text"
+                                      placeholder={t('integrations.sonnetModelPlaceholder')}
+                                      value={customApiSettings.sonnetModel}
+                                      onChange={(e) => setCustomApiSettings({ ...customApiSettings, sonnetModel: e.target.value })}
+                                      className="font-mono text-xs h-8"
+                                    />
+                                    <Input
+                                      type="text"
+                                      placeholder={t('integrations.opusModelPlaceholder')}
+                                      value={customApiSettings.opusModel}
+                                      onChange={(e) => setCustomApiSettings({ ...customApiSettings, opusModel: e.target.value })}
+                                      className="font-mono text-xs h-8"
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => toggleCustomApiSettings(profile.id)}
+                              className="h-7 text-xs"
+                            >
+                              {tCommon('buttons.cancel')}
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={() => handleSaveCustomApiSettings(profile.id)}
+                              disabled={savingCustomApiProfileId === profile.id}
+                              className="h-7 text-xs gap-1"
+                            >
+                              {savingCustomApiProfileId === profile.id ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <Check className="h-3 w-3" />
+                              )}
+                              {tCommon('buttons.save')}
                             </Button>
                           </div>
                         </div>

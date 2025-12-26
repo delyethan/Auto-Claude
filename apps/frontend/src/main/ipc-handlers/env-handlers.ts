@@ -109,6 +109,29 @@ export function registerEnvHandlers(
       existingVars['ENABLE_FANCY_UI'] = config.enableFancyUi ? 'true' : 'false';
     }
 
+    // Custom API Provider Configuration
+    if (config.customApiEnabled !== undefined) {
+      existingVars['CUSTOM_API_ENABLED'] = config.customApiEnabled ? 'true' : 'false';
+    }
+    if (config.customApiBaseUrl !== undefined) {
+      existingVars['ANTHROPIC_BASE_URL'] = config.customApiBaseUrl;
+    }
+    if (config.customApiAuthToken !== undefined) {
+      existingVars['ANTHROPIC_AUTH_TOKEN'] = config.customApiAuthToken;
+    }
+    if (config.customApiTimeout !== undefined) {
+      existingVars['API_TIMEOUT_MS'] = String(config.customApiTimeout);
+    }
+    if (config.customApiHaikuModel !== undefined) {
+      existingVars['ANTHROPIC_DEFAULT_HAIKU_MODEL'] = config.customApiHaikuModel;
+    }
+    if (config.customApiSonnetModel !== undefined) {
+      existingVars['ANTHROPIC_DEFAULT_SONNET_MODEL'] = config.customApiSonnetModel;
+    }
+    if (config.customApiOpusModel !== undefined) {
+      existingVars['ANTHROPIC_DEFAULT_OPUS_MODEL'] = config.customApiOpusModel;
+    }
+
     // Generate content with sections
     const content = `# Auto Claude Framework Environment Variables
 # Managed by Auto Claude UI
@@ -145,6 +168,20 @@ ${existingVars['DEFAULT_BRANCH'] ? `DEFAULT_BRANCH=${existingVars['DEFAULT_BRANC
 # UI SETTINGS (OPTIONAL)
 # =============================================================================
 ${existingVars['ENABLE_FANCY_UI'] !== undefined ? `ENABLE_FANCY_UI=${existingVars['ENABLE_FANCY_UI']}` : '# ENABLE_FANCY_UI=true'}
+
+# =============================================================================
+# CUSTOM API PROVIDER (OPTIONAL)
+# =============================================================================
+# Override default Anthropic API with custom endpoint (e.g., Z.AI, LiteLLM, CCR)
+${existingVars['CUSTOM_API_ENABLED'] !== undefined ? `CUSTOM_API_ENABLED=${existingVars['CUSTOM_API_ENABLED']}` : '# CUSTOM_API_ENABLED=false'}
+${existingVars['ANTHROPIC_BASE_URL'] ? `ANTHROPIC_BASE_URL=${existingVars['ANTHROPIC_BASE_URL']}` : '# ANTHROPIC_BASE_URL=https://api.z.ai/api/anthropic'}
+${existingVars['ANTHROPIC_AUTH_TOKEN'] ? `ANTHROPIC_AUTH_TOKEN=${existingVars['ANTHROPIC_AUTH_TOKEN']}` : '# ANTHROPIC_AUTH_TOKEN=your-custom-token'}
+${existingVars['API_TIMEOUT_MS'] ? `API_TIMEOUT_MS=${existingVars['API_TIMEOUT_MS']}` : '# API_TIMEOUT_MS=600000'}
+
+# Model Mapping (map Auto Claude model tiers to provider's model names)
+${existingVars['ANTHROPIC_DEFAULT_HAIKU_MODEL'] ? `ANTHROPIC_DEFAULT_HAIKU_MODEL=${existingVars['ANTHROPIC_DEFAULT_HAIKU_MODEL']}` : '# ANTHROPIC_DEFAULT_HAIKU_MODEL=glm-4.5-air'}
+${existingVars['ANTHROPIC_DEFAULT_SONNET_MODEL'] ? `ANTHROPIC_DEFAULT_SONNET_MODEL=${existingVars['ANTHROPIC_DEFAULT_SONNET_MODEL']}` : '# ANTHROPIC_DEFAULT_SONNET_MODEL=glm-4.7'}
+${existingVars['ANTHROPIC_DEFAULT_OPUS_MODEL'] ? `ANTHROPIC_DEFAULT_OPUS_MODEL=${existingVars['ANTHROPIC_DEFAULT_OPUS_MODEL']}` : '# ANTHROPIC_DEFAULT_OPUS_MODEL=glm-4.7'}
 
 # =============================================================================
 # MEMORY INTEGRATION
@@ -300,6 +337,29 @@ ${existingVars['GRAPHITI_DB_PATH'] ? `GRAPHITI_DB_PATH=${existingVars['GRAPHITI_
 
       if (vars['ENABLE_FANCY_UI']?.toLowerCase() === 'false') {
         config.enableFancyUi = false;
+      }
+
+      // Custom API Provider Configuration
+      if (vars['CUSTOM_API_ENABLED']?.toLowerCase() === 'true') {
+        config.customApiEnabled = true;
+      }
+      if (vars['ANTHROPIC_BASE_URL']) {
+        config.customApiBaseUrl = vars['ANTHROPIC_BASE_URL'];
+      }
+      if (vars['ANTHROPIC_AUTH_TOKEN']) {
+        config.customApiAuthToken = vars['ANTHROPIC_AUTH_TOKEN'];
+      }
+      if (vars['API_TIMEOUT_MS']) {
+        config.customApiTimeout = parseInt(vars['API_TIMEOUT_MS'], 10);
+      }
+      if (vars['ANTHROPIC_DEFAULT_HAIKU_MODEL']) {
+        config.customApiHaikuModel = vars['ANTHROPIC_DEFAULT_HAIKU_MODEL'];
+      }
+      if (vars['ANTHROPIC_DEFAULT_SONNET_MODEL']) {
+        config.customApiSonnetModel = vars['ANTHROPIC_DEFAULT_SONNET_MODEL'];
+      }
+      if (vars['ANTHROPIC_DEFAULT_OPUS_MODEL']) {
+        config.customApiOpusModel = vars['ANTHROPIC_DEFAULT_OPUS_MODEL'];
       }
 
       // Populate graphitiProviderConfig from .env file (embeddings only - no LLM provider)

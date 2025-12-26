@@ -398,6 +398,35 @@ export function registerTerminalHandlers(
     }
   );
 
+  // Update custom API provider settings for a profile
+  ipcMain.handle(
+    IPC_CHANNELS.CLAUDE_PROFILE_UPDATE_CUSTOM_API,
+    async (_, profileId: string, settings: {
+      enabled?: boolean;
+      baseUrl?: string;
+      authToken?: string;
+      timeout?: number;
+      haikuModel?: string;
+      sonnetModel?: string;
+      opusModel?: string;
+    }): Promise<IPCResult> => {
+      try {
+        const profileManager = getClaudeProfileManager();
+        const success = profileManager.updateCustomApiSettings(profileId, settings);
+        if (!success) {
+          return { success: false, error: 'Profile not found' };
+        }
+        return { success: true };
+      } catch (error) {
+        debugError('[IPC] Failed to update custom API settings:', error);
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Failed to update custom API settings'
+        };
+      }
+    }
+  );
+
   // Get auto-switch settings
   ipcMain.handle(
     IPC_CHANNELS.CLAUDE_PROFILE_AUTO_SWITCH_SETTINGS,
